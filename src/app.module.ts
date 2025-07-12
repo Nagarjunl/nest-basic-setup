@@ -1,41 +1,47 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
+// Core modules
+import { CommonModule } from './common/module';
+
+// Feature modules
+import { AuthModule } from './auth/auth.module';
+
+// Configuration
+import { AppConfig, DatabaseConfig, MailConfig } from './config/app.config';
+
+// Controllers and services
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthenticationModule } from './authentication/authentication.module';
+import { ClientsModule } from './clients/clients.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { join } from 'path';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
-    AuthenticationModule,
+    // Configuration
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+      load: [AppConfig, DatabaseConfig, MailConfig],
+    }),
+
+    // Database
     PrismaModule,
+
+    // Common functionality
+    CommonModule,
+
+    // Feature modules
+    AuthModule,
+
+    // Static files
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'uploads'),
     }),
-    MailerModule.forRoot({
-      transport: {
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.ADMIN_EMAIL, // Your email address
-          pass: process.env.EMAIL_PASSWORD, // Your email password or app-specific password for Gmail
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      },
-      template: {
-        dir: join(__dirname, '../../', 'mailtemplates'),
-        adapter: new HandlebarsAdapter(),
-        options: {
-          strict: true,
-        },
-      },
-    }),
+
+    ClientsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
